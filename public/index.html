@@ -30,7 +30,11 @@
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html { scroll-behavior: smooth; }
-body { font-family: var(--font-body); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+body {
+  font-family: var(--font-body); color: var(--text); background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh; display: flex; flex-direction: column;
+}
 img { display: block; }
 button { font-family: inherit; cursor: pointer; color: inherit; background: none; border: none; }
 input, textarea, select { font-family: inherit; font-size: 14px; color: var(--text); }
@@ -103,7 +107,7 @@ body.authed .admin-actions { display: flex; }
 .btn-sm { height: 30px; padding: 0 10px; font-size: 12px; }
 
 /* ---------- Main ---------- */
-main { max-width: 1240px; margin: 0 auto; padding: 36px 28px 110px; }
+main { flex: 1; width: 100%; max-width: 1240px; margin: 0 auto; padding: 36px 28px 110px; }
 
 /* 首页标题区(紧凑,非 banner) */
 .page-intro { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 28px; }
@@ -277,6 +281,8 @@ body.authed .image-cell .image-del { display: inline-flex; }
 
 footer { border-top: 1px solid var(--border); padding: 26px 24px; text-align: center; }
 footer p { font-family: var(--font-mono); font-size: 11.5px; color: #55555e; letter-spacing: .04em; }
+footer p a { color: inherit; text-decoration: none; transition: color .18s; }
+footer p a:hover { color: var(--accent-bright); }
 
 /* ---------- 移动端 ---------- */
 @media (max-width: 640px) {
@@ -320,7 +326,7 @@ footer p { font-family: var(--font-mono); font-size: 11.5px; color: #55555e; let
 
 <main id="app"></main>
 
-<footer><p>AIGC GALLERY · CLOUDFLARE WORKERS</p></footer>
+<footer><p>AIGC GALLERY · <a href="https://keyi.ma" target="_blank" rel="noopener">作者主页</a></p></footer>
 
 <!-- 新建文件夹 -->
 <div class="dialog-backdrop" id="dlg-folder">
