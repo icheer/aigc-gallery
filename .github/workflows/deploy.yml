@@ -18,6 +18,23 @@ jobs:
 
       - run: npm ci
 
+      # AI_BASE / AI_MODEL / IMG_BASE 在 wrangler.toml [vars] 有默认值;
+      # 若仓库设置了同名 secret 则用 --var 覆盖(未设置则跳过)
+      - name: Collect optional var overrides
+        id: vars
+        env:
+          AI_BASE: ${{ secrets.AI_BASE }}
+          AI_MODEL: ${{ secrets.AI_MODEL }}
+          IMG_BASE: ${{ secrets.IMG_BASE }}
+        run: |
+          {
+            echo 'names<<EOF'
+            for v in AI_BASE AI_MODEL IMG_BASE; do
+              [ -n "${!v}" ] && echo "$v"
+            done
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
       - uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -26,7 +43,11 @@ jobs:
             AUTH_KEY
             AI_KEY
             IMG_KEY
+          vars: ${{ steps.vars.outputs.names }}
         env:
           AUTH_KEY: ${{ secrets.AUTH_KEY }}
           AI_KEY: ${{ secrets.AI_KEY }}
           IMG_KEY: ${{ secrets.IMG_KEY }}
+          AI_BASE: ${{ secrets.AI_BASE }}
+          AI_MODEL: ${{ secrets.AI_MODEL }}
+          IMG_BASE: ${{ secrets.IMG_BASE }}
