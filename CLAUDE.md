@@ -34,7 +34,7 @@ wrangler.toml         # Worker 配置(含 KV binding: KV)
 - `folders` → JSON 数组 `{ id, title, description, createdAt, count, coverUrl, coverThumb }`
 - `images:<folderId>` → JSON 数组(新图在前)`{ id, title, description, prompt, url, thumbUrl, width, height, createdAt }`
 
-图片 `id` 即文件名去扩展名(时间戳+随机);缩略图文件名固定为 `<id>__thumb.jpg`(浏览器 canvas 生成,max 宽 256px JPEG)。
+图片 `id` 即文件名去扩展名(时间戳+随机);缩略图文件名固定为 `<id>__thumb.jpg`(浏览器 canvas 生成,max 边 512px JPEG,逐级减半降采样避免锯齿)。
 
 ## API
 
@@ -53,9 +53,9 @@ wrangler.toml         # Worker 配置(含 KV binding: KV)
 ## 前端要点
 
 - 认证码单一入口(页头解锁框),验证通过后 localStorage 持久化并露出 创建文件夹/上传图片/删除 入口
-- 上传流程:选图(预览+取原始宽高)→ 可选 ⭐ AI 识别回填 → 提交时先 POST 原图、成功后 POST 256px 缩略图(两次 /api/upload)
-- 灯箱浏览:←/→ 切换、Esc 关闭,展示标题/描述/Prompt
-- 设计规范见 DESIGN.md:主色 #0077BC、黑色 hero(#111111)、Archivo Black 标题、JetBrains Mono 用于 Prompt/计数
+- 上传流程:选图(预览+取原始宽高)→ 可选 ⭐ AI 识别回填 → 提交时先 POST 原图、成功后 POST 512px 缩略图(两次 /api/upload)
+- 灯箱浏览:←/→ 切换、Esc 关闭,只展示标题与描述(不显示 Prompt)
+- 界面为深色画廊风格;图标用 lucide(CDN,动态渲染后需调 `lucide.createIcons()`);移动端文件夹/图片网格均为 2 列
 
 ## 常用命令
 
