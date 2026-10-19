@@ -1,0 +1,7 @@
+name = "aigc-gallery"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "b6cc4f1a49d64225b6215032fa03141f"

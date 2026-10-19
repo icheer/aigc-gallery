@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIGC Gallery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary: #0077BC;
+  --primary-dark: #005c8f;
+  --secondary: #009866;
+  --success: #16A34A;
+  --warning: #D97706;
+  --danger: #DC2626;
+  --surface: #111111;
+  --text: #111827;
+  --muted: #6B7280;
+  --bg: #F6F6F4;
+  --card: #FFFFFF;
+  --border: #E5E7EB;
+  --radius: 12px;
+  --font-head: 'Archivo Black', 'Archivo', sans-serif;
+  --font-body: 'Archivo', -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { font-family: var(--font-body); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+img { display: block; }
+button { font-family: inherit; cursor: pointer; }
+input, textarea, select { font-family: inherit; font-size: 14px; color: var(--text); }
+a { color: inherit; }
+
+/* ---------- Header ---------- */
+.site-header {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(255,255,255,.92); backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+.header-inner {
+  max-width: 1200px; margin: 0 auto; padding: 0 24px;
+  height: 64px; display: flex; align-items: center; gap: 16px;
+}
+.logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.logo-mark { width: 28px; height: 28px; background: var(--primary); border-radius: 6px; position: relative; flex: none; }
+.logo-mark::after {
+  content: "A"; position: absolute; inset: 0; display: grid; place-items: center;
+  color: #fff; font-family: var(--font-head); font-size: 15px;
+}
+.logo-text { font-family: var(--font-head); font-size: 17px; letter-spacing: .5px; }
+.logo-text b { color: var(--primary); font-weight: 400; }
+.header-spacer { flex: 1; }
+.auth-box { display: flex; align-items: center; gap: 8px; }
+.auth-box input {
+  width: 150px; height: 36px; padding: 0 12px; border: 1.5px solid var(--border);
+  border-radius: 8px; outline: none; transition: border-color .2s;
+}
+.auth-box input:focus { border-color: var(--primary); }
+.auth-box.shake { animation: shake .3s; }
+@keyframes shake { 25% { transform: translateX(-4px);} 75% { transform: translateX(4px);} }
+.authed-badge {
+  display: none; align-items: center; gap: 10px;
+  font-family: var(--font-mono); font-size: 12px; color: var(--success);
+}
+.authed-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+.authed-badge button { background: none; border: none; color: var(--muted); font-size: 12px; text-decoration: underline; }
+.authed-badge button:hover { color: var(--text); }
+body.authed .auth-box input, body.authed .btn-unlock { display: none; }
+body.authed .authed-badge { display: flex; }
+.admin-actions { display: none; gap: 8px; }
+body.authed .admin-actions { display: flex; }
+
+/* ---------- Buttons ---------- */
+.btn {
+  height: 36px; padding: 0 16px; border: none; border-radius: 8px;
+  font-size: 13px; font-weight: 600; letter-spacing: .02em;
+  display: inline-flex; align-items: center; gap: 6px;
+  transition: background .18s, transform .12s, box-shadow .18s;
+}
+.btn:active { transform: scale(.97); }
+.btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: var(--primary-dark); box-shadow: 0 4px 14px rgba(0,119,188,.35); }
+.btn-ghost { background: #fff; color: var(--text); border: 1.5px solid var(--border); }
+.btn-ghost:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+.btn-danger-ghost { background: none; color: var(--danger); border: 1.5px solid transparent; }
+.btn-danger-ghost:hover { border-color: var(--danger); }
+.btn-sm { height: 30px; padding: 0 10px; font-size: 12px; }
+
+/* ---------- Hero ---------- */
+.hero { background: var(--surface); color: #fff; padding: 72px 24px 64px; }
+.hero-inner { max-width: 1200px; margin: 0 auto; }
+.hero h1 {
+  font-family: var(--font-head); font-size: clamp(40px, 7vw, 84px);
+  line-height: 1.02; letter-spacing: -1px; text-transform: uppercase;
+}
+.hero h1 span { color: var(--primary); }
+.hero p {
+  margin-top: 20px; font-size: 15px; color: #9CA3AF; max-width: 560px; line-height: 1.7;
+}
+.hero-stats { margin-top: 28px; display: flex; gap: 32px; font-family: var(--font-mono); font-size: 13px; color: #d1d5db; }
+.hero-stats b { color: #fff; font-size: 22px; font-weight: 500; display: block; }
+
+/* ---------- Main / Folder grid ---------- */
+main { max-width: 1200px; margin: 0 auto; padding: 40px 24px 96px; }
+.section-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 20px; }
+.section-head h2 { font-family: var(--font-head); font-size: 22px; letter-spacing: .3px; }
+.section-head .count { font-family: var(--font-mono); font-size: 13px; color: var(--muted); }
+.folder-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px;
+}
+.folder-card {
+  background: var(--card); border: 1.5px solid var(--border); border-radius: var(--radius);
+  overflow: hidden; cursor: pointer; text-decoration: none; display: block; position: relative;
+  transition: transform .2s, border-color .2s, box-shadow .2s;
+}
+.folder-card:hover { transform: translateY(-4px); border-color: var(--primary); box-shadow: 0 12px 32px rgba(17,24,39,.1); }
+.folder-cover { aspect-ratio: 4/3; background: linear-gradient(135deg, #1f2937, #111827); overflow: hidden; position: relative; }
+.folder-cover img { width: 100%; height: 100%; object-fit: cover; transition: transform .25s; }
+.folder-card:hover .folder-cover img { transform: scale(1.05); }
+.folder-cover .cover-fallback {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  color: #6B7280; font-family: var(--font-head); font-size: 44px; opacity: .5;
+}
+.folder-body { padding: 16px; }
+.folder-body h3 { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.folder-body p {
+  margin-top: 6px; font-size: 13px; color: var(--muted); line-height: 1.55;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  min-height: 0;
+}
+.folder-meta { margin-top: 12px; display: flex; justify-content: space-between; align-items: center; }
+.folder-meta .works { font-family: var(--font-mono); font-size: 12px; color: var(--primary); font-weight: 500; }
+.folder-del {
+  display: none; position: absolute; top: 10px; right: 10px; z-index: 2;
+  background: rgba(17,17,17,.75); color: #fff;
+}
+body.authed .folder-del { display: inline-flex; }
+
+/* ---------- Folder detail ---------- */
+.crumb { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); text-decoration: none; margin-bottom: 20px; }
+.crumb:hover { color: var(--primary); }
+.folder-detail-head { margin-bottom: 28px; }
+.folder-detail-head h2 { font-family: var(--font-head); font-size: clamp(26px, 4vw, 40px); line-height: 1.15; }
+.folder-detail-head p { margin-top: 10px; color: var(--muted); font-size: 14px; max-width: 680px; line-height: 1.6; }
+.image-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
+.image-cell {
+  position: relative; border-radius: var(--radius); overflow: hidden; cursor: zoom-in;
+  background: #e5e7eb; aspect-ratio: 1/1; border: 1.5px solid transparent;
+  transition: border-color .2s, transform .2s;
+}
+.image-cell:hover { border-color: var(--primary); transform: translateY(-2px); }
+.image-cell img { width: 100%; height: 100%; object-fit: cover; }
+.image-cell .image-del {
+  display: none; position: absolute; top: 8px; right: 8px; z-index: 2;
+  background: rgba(17,17,17,.75); color: #fff;
+}
+body.authed .image-cell .image-del { display: inline-flex; }
+
+/* ---------- Empty state ---------- */
+.empty {
+  text-align: center; padding: 80px 24px; color: var(--muted);
+  border: 2px dashed var(--border); border-radius: var(--radius); background: #fff;
+}
+.empty .big { font-family: var(--font-head); font-size: 24px; color: var(--text); margin-bottom: 10px; }
+.empty p { font-size: 14px; margin-bottom: 20px; }
+
+/* ---------- Dialog ---------- */
+.dialog-backdrop {
+  position: fixed; inset: 0; background: rgba(17,17,17,.55); z-index: 100;
+  display: none; align-items: flex-start; justify-content: center; padding: 6vh 16px 16px;
+  overflow-y: auto;
+}
+.dialog-backdrop.open { display: flex; }
+.dialog {
+  background: #fff; border-radius: 16px; width: 100%; max-width: 520px;
+  padding: 28px; box-shadow: 0 24px 64px rgba(0,0,0,.3);
+  animation: dialogIn .2s ease-out;
+}
+@keyframes dialogIn { from { opacity: 0; transform: translateY(12px) scale(.98); } }
+.dialog h3 { font-family: var(--font-head); font-size: 20px; margin-bottom: 20px; }
+.dialog .field { margin-bottom: 16px; }
+.dialog label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+.dialog label .opt { color: var(--muted); font-weight: 400; font-size: 12px; }
+.dialog input[type=text], .dialog input[type=password], .dialog textarea, .dialog select {
+  width: 100%; border: 1.5px solid var(--border); border-radius: 8px;
+  padding: 10px 12px; outline: none; transition: border-color .2s; background: #fff;
+}
+.dialog input:focus, .dialog textarea:focus, .dialog select:focus { border-color: var(--primary); }
+.dialog textarea { resize: vertical; min-height: 64px; }
+.dialog .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+
+/* 上传:图片选择与预览 */
+.pick-zone {
+  border: 2px dashed var(--border); border-radius: var(--radius); padding: 24px;
+  text-align: center; cursor: pointer; transition: border-color .2s, background .2s;
+  color: var(--muted); font-size: 13px;
+}
+.pick-zone:hover, .pick-zone.drag { border-color: var(--primary); background: rgba(0,119,188,.04); }
+.pick-zone .hint { margin-top: 6px; }
+.pick-zone.has-img { padding: 0; border-style: solid; }
+.pick-zone img { width: 100%; max-height: 260px; object-fit: contain; background: #f3f4f6; border-radius: 10px; }
+.prompt-row { display: flex; gap: 8px; align-items: stretch; }
+.prompt-row input { flex: 1; }
+.star-btn {
+  flex: none; width: 44px; border: 1.5px solid var(--border); border-radius: 8px;
+  background: #fff; font-size: 18px; transition: border-color .2s, transform .15s;
+}
+.star-btn:hover:not(:disabled) { border-color: var(--warning); transform: scale(1.08); }
+.star-btn:disabled { opacity: .5; cursor: not-allowed; }
+.star-btn.spinning { animation: spin 1s linear infinite; pointer-events: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.form-status { font-size: 13px; margin-top: 4px; min-height: 18px; }
+.form-status.ok { color: var(--success); }
+.form-status.err { color: var(--danger); }
+
+/* ---------- Lightbox ---------- */
+.lightbox {
+  position: fixed; inset: 0; z-index: 200; background: rgba(11,11,11,.94);
+  display: none; flex-direction: column;
+}
+.lightbox.open { display: flex; }
+.lb-stage { flex: 1; display: grid; place-items: center; padding: 24px 64px; min-height: 0; position: relative; }
+.lb-stage img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 4px; user-select: none; }
+.lb-nav {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 44px; height: 44px; border-radius: 50%; border: none;
+  background: rgba(255,255,255,.12); color: #fff; font-size: 20px;
+  display: grid; place-items: center; transition: background .2s;
+}
+.lb-nav:hover { background: var(--primary); }
+.lb-prev { left: 12px; } .lb-next { right: 12px; }
+.lb-close {
+  position: absolute; top: 16px; right: 16px; z-index: 5;
+  width: 40px; height: 40px; border-radius: 50%; border: none;
+  background: rgba(255,255,255,.12); color: #fff; font-size: 18px;
+  display: grid; place-items: center; transition: background .2s;
+}
+.lb-close:hover { background: var(--danger); }
+.lb-caption {
+  padding: 14px 24px 20px; text-align: center; color: #d1d5db; max-width: 860px; margin: 0 auto;
+}
+.lb-caption h4 { color: #fff; font-size: 16px; font-weight: 700; }
+.lb-caption p { font-size: 13px; margin-top: 6px; line-height: 1.6; }
+.lb-caption .lb-prompt {
+  margin-top: 8px; font-family: var(--font-mono); font-size: 12px; color: #9CA3AF;
+  white-space: pre-wrap; word-break: break-word;
+}
+.lb-caption .lb-prompt b { color: var(--primary); font-weight: 500; }
+.lb-del {
+  position: absolute; top: 16px; left: 16px; z-index: 5; display: none;
+  background: rgba(255,255,255,.12); color: #fff;
+}
+body.authed .lb-del { display: inline-flex; }
+
+/* ---------- Toast ---------- */
+.toast {
+  position: fixed; left: 50%; bottom: 32px; transform: translateX(-50%) translateY(20px);
+  background: var(--surface); color: #fff; padding: 11px 20px; border-radius: 10px;
+  font-size: 13px; z-index: 300; opacity: 0; pointer-events: none;
+  transition: opacity .25s, transform .25s; max-width: 90vw;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.err { background: var(--danger); }
+.toast.ok { background: var(--success); }
+
+footer { border-top: 1px solid var(--border); padding: 28px 24px; text-align: center; }
+footer p { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+
+@media (max-width: 640px) {
+  .header-inner { padding: 0 16px; }
+  .logo-text { display: none; }
+  .auth-box input { width: 110px; }
+  main { padding: 28px 16px 72px; }
+  .hero { padding: 48px 16px 44px; }
+  .lb-stage { padding: 16px 48px; }
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a class="logo" href="#/">
+      <span class="logo-mark"></span>
+      <span class="logo-text">AIGC <b>Gallery</b></span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="admin-actions">
+      <button class="btn btn-ghost btn-sm" id="btn-new-folder">＋ 文件夹</button>
+      <button class="btn btn-primary btn-sm" id="btn-upload">上传图片</button>
+    </div>
+    <div class="auth-box" id="auth-box">
+      <input type="password" id="auth-input" placeholder="认证码" autocomplete="off">
+      <button class="btn btn-primary btn-sm btn-unlock" id="btn-unlock">解锁</button>
+      <span class="authed-badge">
+        <span class="dot"></span>已解锁
+        <button id="btn-lock" title="清除认证码">退出</button>
+      </span>
+    </div>
+  </div>
+</header>
+
+<main id="app"></main>
+
+<footer><p>AIGC GALLERY · POWERED BY CLOUDFLARE WORKERS</p></footer>
+
+<!-- 新建文件夹 -->
+<div class="dialog-backdrop" id="dlg-folder">
+  <div class="dialog">
+    <h3>新建文件夹</h3>
+    <div class="field">
+      <label>标题</label>
+      <input type="text" id="folder-title" placeholder="例如: 手机壁纸 / 海报设计 / AI Memes" maxlength="40">
+    </div>
+    <div class="field">
+      <label>描述 <span class="opt">(选填)</span></label>
+      <textarea id="folder-desc" placeholder="这个主题是关于什么的" maxlength="200"></textarea>
+    </div>
+    <div class="form-status" id="folder-status"></div>
+    <div class="actions">
+      <button class="btn btn-ghost" data-close>取消</button>
+      <button class="btn btn-primary" id="btn-folder-submit">创建</button>
+    </div>
+  </div>
+</div>
+
+<!-- 上传图片 -->
+<div class="dialog-backdrop" id="dlg-upload">
+  <div class="dialog">
+    <h3>上传图片</h3>
+    <div class="field">
+      <label>图片</label>
+      <div class="pick-zone" id="pick-zone">
+        <div id="pick-empty">
+          <div>📁 点击选择图片,或拖拽到此处</div>
+          <div class="hint">支持 JPEG / PNG / WebP / GIF</div>
+        </div>
+        <img id="pick-preview" alt="预览" style="display:none">
+      </div>
+      <input type="file" id="file-input" accept="image/*" style="display:none">
+    </div>
+    <div class="field">
+      <label>所属文件夹</label>
+      <div style="display:flex; gap:8px;">
+        <select id="upload-folder" style="flex:1"></select>
+        <button class="btn btn-ghost btn-sm" id="btn-new-folder-inline" style="height:auto;">新建</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>标题</label>
+      <input type="text" id="img-title" placeholder="图片标题" maxlength="60">
+    </div>
+    <div class="field">
+      <label>描述 <span class="opt">(选填)</span></label>
+      <textarea id="img-desc" placeholder="图片描述" maxlength="300"></textarea>
+    </div>
+    <div class="field">
+      <label>Prompt <span class="opt">(选填)</span></label>
+      <div class="prompt-row">
+        <input type="text" id="img-prompt" placeholder="生成提示词,或作为 AI 识别的补充提示">
+        <button class="star-btn" id="btn-ai" title="AI 识别:根据图片和提示词自动填写标题与描述">⭐</button>
+      </div>
+    </div>
+    <div class="form-status" id="upload-status"></div>
+    <div class="actions">
+      <button class="btn btn-ghost" data-close>取消</button>
+      <button class="btn btn-primary" id="btn-upload-submit">上传</button>
+    </div>
+  </div>
+</div>
+
+<!-- 灯箱 -->
+<div class="lightbox" id="lightbox">
+  <button class="btn btn-danger-ghost btn-sm lb-del" id="lb-del">删除</button>
+  <button class="lb-close" id="lb-close">✕</button>
+  <div class="lb-stage">
+    <button class="lb-nav lb-prev" id="lb-prev">←</button>
+    <img id="lb-img" alt="">
+    <button class="lb-nav lb-next" id="lb-next">→</button>
+  </div>
+  <div class="lb-caption">
+    <h4 id="lb-title"></h4>
+    <p id="lb-desc"></p>
+    <div class="lb-prompt" id="lb-prompt" style="display:none"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+// ================= 全局状态 =================
+const LS_KEY = "aigc_auth_code";
+const state = {
+  authCode: localStorage.getItem(LS_KEY) || "",
+  authed: false,
+  folders: [],
+  currentFolderId: null,
+  images: [],          // 当前文件夹的图片
+  lbIndex: -1,         // 灯箱索引
+  uploadFile: null,    // 待上传原图 File
+  uploadThumb: null,   // 浏览器生成的缩略图 Blob
+  uploadDims: null,    // {width, height}
+};
+
+const $ = (s) => document.querySelector(s);
+const app = $("#app");
+
+// ================= 工具 =================
+function toast(msg, type = "") {
+  const el = $("#toast");
+  el.textContent = msg;
+  el.className = "toast show " + type;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => (el.className = "toast " + type), 2600);
+}
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function fmtDate(ts) {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+async function api(path, opts = {}) {
+  const res = await fetch(path, opts);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `请求失败 (${res.status})`);
+  return data;
+}
+
+// ================= 认证 =================
+async function tryAuth(code, { silent = false } = {}) {
+  if (!code) return false;
+  try {
+    await api("/api/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
+    });
+    state.authCode = code;
+    state.authed = true;
+    localStorage.setItem(LS_KEY, code);
+    document.body.classList.add("authed");
+    render();
+    return true;
+  } catch (e) {
+    if (!silent) {
+      toast(e.message, "err");
+      const box = $("#auth-box");
+      box.classList.remove("shake");
+      void box.offsetWidth;
+      box.classList.add("shake");
+    }
+    return false;
+  }
+}
+function lock() {
+  state.authed = false;
+  state.authCode = "";
+  localStorage.removeItem(LS_KEY);
+  document.body.classList.remove("authed");
+  render();
+}
+
+// ================= 图片处理 =================
+function loadImageEl(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("图片读取失败"));
+    img.src = src;
+  });
+}
+// 按 maxW/maxH 等比压缩(双约束),输出 JPEG Blob
+async function compressImage(file, maxW, maxH, quality) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await loadImageEl(url);
+    let { width, height } = img;
+    const scale = Math.min(1, maxW / width, maxH / height);
+    width = Math.max(1, Math.round(width * scale));
+    height = Math.max(1, Math.round(height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+    return await new Promise((resolve) =>
+      canvas.toBlob((b) => resolve(b), "image/jpeg", quality));
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+// ================= 路由与渲染 =================
+async function loadFolders() {
+  const data = await api("/api/folders");
+  state.folders = data.folders;
+}
+async function loadImages(folderId) {
+  const data = await api(`/api/folders/${encodeURIComponent(folderId)}/images`);
+  state.images = data.images;
+}
+
+function render() {
+  const hash = location.hash || "#/";
+  const m = hash.match(/^#\/f\/([^/]+)/);
+  if (m) renderFolder(m[1]);
+  else renderHome();
+}
+
+async function renderHome() {
+  state.currentFolderId = null;
+  await loadFolders();
+  const fs = state.folders;
+  const totalWorks = fs.reduce((n, f) => n + (f.count || 0), 0);
+
+  const cards = fs.map((f) => `
+    <a class="folder-card" href="#/f/${esc(f.id)}">
+      <button class="btn btn-danger-ghost btn-sm folder-del" data-del-folder="${esc(f.id)}" title="删除文件夹">✕ 删除</button>
+      <div class="folder-cover">
+        ${f.coverThumb
+          ? `<img src="${esc(f.coverThumb)}" alt="${esc(f.title)}" loading="lazy">`
+          : `<div class="cover-fallback">${esc((f.title || "?")[0].toUpperCase())}</div>`}
+      </div>
+      <div class="folder-body">
+        <h3>${esc(f.title)}</h3>
+        ${f.description ? `<p>${esc(f.description)}</p>` : ""}
+        <div class="folder-meta">
+          <span class="works">${f.count || 0} works</span>
+          <span class="works" style="color:var(--muted)">${fmtDate(f.createdAt)}</span>
+        </div>
+      </div>
+    </a>`).join("");
+
+  app.innerHTML = `
+    <section class="hero">
+      <div class="hero-inner">
+        <h1>AIGC<br>GA<span>LL</span>ERY</h1>
+        <p>按主题归档的 AI 生成作品集 —— 手机壁纸、海报设计、AI Memes 与更多实验。</p>
+        <div class="hero-stats">
+          <div><b>${fs.length}</b>FOLDERS</div>
+          <div><b>${totalWorks}</b>WORKS</div>
+        </div>
+      </div>
+    </section>
+    <section style="padding-top:40px">
+      <div class="section-head">
+        <h2>主题文件夹</h2>
+        <span class="count">${fs.length} folders / ${totalWorks} works</span>
+      </div>
+      ${fs.length
+        ? `<div class="folder-grid">${cards}</div>`
+        : `<div class="empty">
+             <div class="big">还没有文件夹</div>
+             <p>${state.authed ? "创建第一个主题文件夹,开始归档你的作品。" : "解锁后即可创建主题文件夹并上传作品。"}</p>
+             ${state.authed
+               ? `<button class="btn btn-primary" onclick="document.getElementById('btn-new-folder').click()">＋ 创建文件夹</button>`
+               : ""}
+           </div>`}
+    </section>`;
+  bindDeleteButtons();
+}
+
+async function renderFolder(folderId) {
+  state.currentFolderId = folderId;
+  let folder;
+  try {
+    await loadFolders();
+    folder = state.folders.find((f) => f.id === folderId);
+    if (!folder) throw new Error("not found");
+    await loadImages(folderId);
+  } catch (e) {
+    app.innerHTML = `<div class="empty"><div class="big">文件夹不存在</div>
+      <p>它可能已被删除。</p><a class="btn btn-ghost" href="#/">← 返回首页</a></div>`;
+    return;
+  }
+  const imgs = state.images;
+  const cells = imgs.map((im, i) => `
+    <div class="image-cell" data-idx="${i}" title="${esc(im.title)}">
+      <button class="btn btn-danger-ghost btn-sm image-del" data-del-image="${esc(im.id)}" title="删除图片">✕</button>
+      <img src="${esc(im.thumbUrl || im.url)}" alt="${esc(im.title)}" loading="lazy">
+    </div>`).join("");
+
+  app.innerHTML = `
+    <a class="crumb" href="#/">← 所有文件夹</a>
+    <div class="folder-detail-head">
+      <h2>${esc(folder.title)}</h2>
+      ${folder.description ? `<p>${esc(folder.description)}</p>` : ""}
+      <div class="folder-meta" style="margin-top:12px">
+        <span class="works">${imgs.length} works</span>
+      </div>
+    </div>
+    ${imgs.length
+      ? `<div class="image-grid">${cells}</div>`
+      : `<div class="empty"><div class="big">空文件夹</div>
+          <p>${state.authed ? "上传第一张图片吧。" : "该文件夹还没有图片。"}</p>
+          ${state.authed ? `<button class="btn btn-primary" onclick="openUpload('${esc(folder.id)}')">上传图片</button>` : ""}
+        </div>`}`;
+  app.querySelectorAll(".image-cell").forEach((cell) => {
+    cell.addEventListener("click", (e) => {
+      if (e.target.closest(".image-del")) return;
+      openLightbox(Number(cell.dataset.idx));
+    });
+  });
+  app.querySelectorAll("[data-del-image]").forEach((btn) => {
+    btn.addEventListener("click", () => deleteImage(btn.dataset.delImage));
+  });
+}
+
+function bindDeleteButtons() {
+  app.querySelectorAll("[data-del-folder]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      deleteFolder(btn.dataset.delFolder);
+    });
+  });
+}
+
+// ================= 删除 =================
+async function deleteFolder(id) {
+  const f = state.folders.find((x) => x.id === id);
+  if (!confirm(`确定删除文件夹「${f ? f.title : ""}」吗?(${f ? f.count : 0} 条图片记录将被移除,图床文件保留)`)) return;
+  try {
+    await api(`/api/folders/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: { "X-Auth-Code": state.authCode },
+    });
+    toast("文件夹已删除", "ok");
+    if (state.currentFolderId === id) location.hash = "#/";
+    else render();
+  } catch (e) { toast(e.message, "err"); }
+}
+async function deleteImage(id) {
+  if (!state.currentFolderId || !confirm("确定删除这张图片吗?(图床文件保留)")) return;
+  try {
+    await api(`/api/folders/${encodeURIComponent(state.currentFolderId)}/images/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: { "X-Auth-Code": state.authCode },
+    });
+    toast("图片已删除", "ok");
+    closeLightbox();
+    render();
+  } catch (e) { toast(e.message, "err"); }
+}
+
+// ================= 灯箱 =================
+function openLightbox(idx) {
+  state.lbIndex = idx;
+  updateLightbox();
+  $("#lightbox").classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+function updateLightbox() {
+  const im = state.images[state.lbIndex];
+  if (!im) return;
+  $("#lb-img").src = im.url;
+  $("#lb-title").textContent = im.title || "";
+  $("#lb-desc").textContent = im.description || "";
+  const p = $("#lb-prompt");
+  if (im.prompt) { p.style.display = ""; p.innerHTML = `<b>PROMPT&nbsp;</b>${esc(im.prompt)}`; }
+  else p.style.display = "none";
+}
+function stepLightbox(d) {
+  const n = state.images.length;
+  if (!n) return;
+  state.lbIndex = (state.lbIndex + d + n) % n;
+  updateLightbox();
+}
+function closeLightbox() {
+  $("#lightbox").classList.remove("open");
+  document.body.style.overflow = "";
+  state.lbIndex = -1;
+}
+
+// ================= 对话框 =================
+function openDialog(id) {
+  $(id).classList.add("open");
+}
+function closeDialog(id) {
+  $(id).classList.remove("open");
+}
+document.querySelectorAll(".dialog-backdrop").forEach((bd) => {
+  bd.addEventListener("click", (e) => { if (e.target === bd) bd.classList.remove("open"); });
+  bd.querySelectorAll("[data-close]").forEach((b) =>
+    b.addEventListener("click", () => bd.classList.remove("open")));
+});
+
+// ---- 新建文件夹 ----
+function openFolderDialog() {
+  $("#folder-title").value = "";
+  $("#folder-desc").value = "";
+  setStatus("#folder-status", "");
+  openDialog("#dlg-folder");
+  $("#folder-title").focus();
+}
+async function submitFolder() {
+  const title = $("#folder-title").value.trim();
+  if (!title) return setStatus("#folder-status", "标题不能为空", "err");
+  const btn = $("#btn-folder-submit");
+  btn.disabled = true;
+  try {
+    await api("/api/folders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: state.authCode, title, description: $("#folder-desc").value.trim() }),
+    });
+    closeDialog("#dlg-folder");
+    toast("文件夹已创建", "ok");
+    render();
+  } catch (e) {
+    setStatus("#folder-status", e.message, "err");
+  } finally { btn.disabled = false; }
+}
+
+// ---- 上传 ----
+function setStatus(sel, msg, cls = "") {
+  const el = $(sel);
+  el.textContent = msg;
+  el.className = "form-status " + cls;
+}
+function openUpload(folderId) {
+  if (!state.folders.length) { toast("请先创建文件夹", "err"); openFolderDialog(); return; }
+  // 重置表单
+  state.uploadFile = null; state.uploadThumb = null; state.uploadDims = null;
+  $("#file-input").value = "";
+  $("#pick-preview").style.display = "none";
+  $("#pick-empty").style.display = "";
+  $("#pick-zone").classList.remove("has-img");
+  $("#img-title").value = ""; $("#img-desc").value = ""; $("#img-prompt").value = "";
+  setStatus("#upload-status", "");
+  // 填充文件夹下拉
+  const sel = $("#upload-folder");
+  sel.innerHTML = state.folders.map((f) =>
+    `<option value="${esc(f.id)}">${esc(f.title)}</option>`).join("");
+  if (folderId) sel.value = folderId;
+  openDialog("#dlg-upload");
+}
+async function handleFilePicked(file) {
+  if (!file || !file.type.startsWith("image/")) return toast("请选择图片文件", "err");
+  state.uploadFile = file;
+  // 预览 + 原始尺寸 + 缩略图(256px 宽)
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await loadImageEl(url);
+    state.uploadDims = { width: img.naturalWidth, height: img.naturalHeight };
+  } finally { URL.revokeObjectURL(url); }
+  $("#pick-preview").src = URL.createObjectURL(file);
+  $("#pick-preview").style.display = "";
+  $("#pick-empty").style.display = "none";
+  $("#pick-zone").classList.add("has-img");
+  state.uploadThumb = await compressImage(file, 256, 256, 0.8);
+}
+async function submitUpload() {
+  const file = state.uploadFile;
+  if (!file) return setStatus("#upload-status", "请先选择图片", "err");
+  const title = $("#img-title").value.trim();
+  if (!title) return setStatus("#upload-status", "标题不能为空", "err");
+  const folderId = $("#upload-folder").value;
+  const description = $("#img-desc").value.trim();
+  const prompt = $("#img-prompt").value.trim();
+
+  const btn = $("#btn-upload-submit");
+  btn.disabled = true;
+  try {
+    // 1/2 原图
+    setStatus("#upload-status", "上传原图中 (1/2)…");
+    const fd = new FormData();
+    fd.append("code", state.authCode);
+    fd.append("folderId", folderId);
+    fd.append("file", file);
+    fd.append("title", title);
+    fd.append("description", description);
+    fd.append("prompt", prompt);
+    fd.append("width", state.uploadDims ? state.uploadDims.width : "");
+    fd.append("height", state.uploadDims ? state.uploadDims.height : "");
+    const r1 = await api("/api/upload", { method: "POST", body: fd });
+
+    // 2/2 缩略图
+    let thumbWarn = "";
+    if (state.uploadThumb) {
+      try {
+        setStatus("#upload-status", "上传缩略图中 (2/2)…");
+        const fd2 = new FormData();
+        fd2.append("code", state.authCode);
+        fd2.append("folderId", folderId);
+        fd2.append("imageId", r1.imageId);
+        fd2.append("file", state.uploadThumb, `${r1.imageId}__thumb.jpg`);
+        await api("/api/upload", { method: "POST", body: fd2 });
+      } catch (e) {
+        thumbWarn = `(缩略图失败: ${e.message})`;
+      }
+    }
+    closeDialog("#dlg-upload");
+    toast("上传成功 " + thumbWarn, thumbWarn ? "" : "ok");
+    if (state.currentFolderId === folderId || !location.hash.startsWith("#/f/")) render();
+    else location.hash = "#/f/" + folderId;
+  } catch (e) {
+    setStatus("#upload-status", e.message, "err");
+  } finally { btn.disabled = false; }
+}
+
+// ---- AI 识别 ----
+async function aiDescribe() {
+  if (!state.uploadFile) return setStatus("#upload-status", "请先选择图片再使用 AI 识别", "err");
+  const btn = $("#btn-ai");
+  btn.disabled = true;
+  btn.classList.add("spinning");
+  setStatus("#upload-status", "⭐ AI 识别中…");
+  try {
+    const compressed = await compressImage(state.uploadFile, 1024, 1024, 0.85);
+    const fd = new FormData();
+    fd.append("code", state.authCode);
+    fd.append("prompt", $("#img-prompt").value.trim());
+    fd.append("file", compressed, "ai-input.jpg");
+    const r = await api("/api/ai-describe", { method: "POST", body: fd });
+    if (r.title) $("#img-title").value = r.title;
+    if (r.description) $("#img-desc").value = r.description;
+    setStatus("#upload-status", "已回填标题与描述", "ok");
+  } catch (e) {
+    setStatus("#upload-status", e.message, "err");
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove("spinning");
+  }
+}
+
+// ================= 事件绑定 =================
+$("#btn-unlock").addEventListener("click", () => tryAuth($("#auth-input").value));
+$("#auth-input").addEventListener("keydown", (e) => { if (e.key === "Enter") tryAuth($("#auth-input").value); });
+$("#btn-lock").addEventListener("click", lock);
+$("#btn-new-folder").addEventListener("click", openFolderDialog);
+$("#btn-new-folder-inline").addEventListener("click", openFolderDialog);
+$("#btn-folder-submit").addEventListener("click", submitFolder);
+$("#folder-title").addEventListener("keydown", (e) => { if (e.key === "Enter") submitFolder(); });
+$("#btn-upload").addEventListener("click", () => openUpload(state.currentFolderId));
+$("#btn-upload-submit").addEventListener("click", submitUpload);
+$("#btn-ai").addEventListener("click", aiDescribe);
+
+$("#pick-zone").addEventListener("click", () => $("#file-input").click());
+$("#file-input").addEventListener("change", (e) => handleFilePicked(e.target.files[0]));
+$("#pick-zone").addEventListener("dragover", (e) => { e.preventDefault(); $("#pick-zone").classList.add("drag"); });
+$("#pick-zone").addEventListener("dragleave", () => $("#pick-zone").classList.remove("drag"));
+$("#pick-zone").addEventListener("drop", (e) => {
+  e.preventDefault();
+  $("#pick-zone").classList.remove("drag");
+  handleFilePicked(e.dataTransfer.files[0]);
+});
+
+$("#lb-close").addEventListener("click", closeLightbox);
+$("#lb-prev").addEventListener("click", () => stepLightbox(-1));
+$("#lb-next").addEventListener("click", () => stepLightbox(1));
+$("#lb-del").addEventListener("click", () => {
+  const im = state.images[state.lbIndex];
+  if (im) deleteImage(im.id);
+});
+document.addEventListener("keydown", (e) => {
+  if (!$("#lightbox").classList.contains("open")) return;
+  if (e.key === "Escape") closeLightbox();
+  else if (e.key === "ArrowLeft") stepLightbox(-1);
+  else if (e.key === "ArrowRight") stepLightbox(1);
+});
+window.addEventListener("hashchange", render);
+
+// openUpload 需要能被内联 onclick 调用
+window.openUpload = openUpload;
+
+// ================= 启动 =================
+(async function init() {
+  render();
+  if (state.authCode) {
+    const ok = await tryAuth(state.authCode, { silent: true });
+    if (!ok) toast("已保存的认证码已失效,请重新输入", "");
+  }
+})();
+</script>
+</body>
+</html>
