@@ -2,10 +2,12 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>AIGC Gallery</title>
 <link rel="preconnect" href="https://fonts.loli.net">
 <link href="https://fonts.loli.net/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Black&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/dist/photoswipe.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/photoswipe-dynamic-caption-plugin@1.2.7/photoswipe-dynamic-caption-plugin.css">
 <script src="https://unpkg.com/lucide@1.59.0/dist/umd/lucide.min.js"></script>
 <style>
 :root {
@@ -243,29 +245,10 @@ body.authed .image-cell .image-del { display: inline-flex; }
 .form-status.ok { color: var(--success); }
 .form-status.err { color: var(--danger); }
 
-/* ---------- Lightbox ---------- */
-.lightbox {
-  position: fixed; inset: 0; z-index: 200; background: rgba(7,7,10,.96);
-  display: none; flex-direction: column;
-}
-.lightbox.open { display: flex; }
-.lb-stage { flex: 1; display: grid; place-items: center; padding: 20px 60px; min-height: 0; position: relative; }
-.lb-stage img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 4px; user-select: none; }
-.lb-btn {
-  position: absolute; width: 42px; height: 42px; border-radius: 50%;
-  display: grid; place-items: center; color: #cfcfd6;
-  background: rgba(255,255,255,.08);
-  transition: background .18s, color .18s;
-}
-.lb-btn:hover { background: var(--accent); color: #fff; }
-.lb-btn .lucide { width: 19px; height: 19px; }
-.lb-prev { left: 14px; top: 50%; transform: translateY(-50%); }
-.lb-next { right: 14px; top: 50%; transform: translateY(-50%); }
-.lb-close { top: 16px; right: 16px; z-index: 5; }
-.lb-close:hover { background: var(--danger); }
-.lb-caption { padding: 12px 24px 22px; text-align: center; color: var(--muted); max-width: 820px; margin: 0 auto; }
-.lb-caption h4 { color: var(--text); font-size: 15px; font-weight: 700; }
-.lb-caption p { font-size: 13px; margin-top: 5px; line-height: 1.6; }
+/* ---------- Lightbox(PhotoSwipe) ---------- */
+.pswp { --pswp-bg: rgba(7,7,10,.96); }
+.pswp__dynamic-caption .lb-title { font-size: 15px; font-weight: 700; color: var(--text); }
+.pswp__dynamic-caption .lb-desc { font-size: 13px; margin-top: 4px; color: var(--muted); line-height: 1.6; }
 
 /* ---------- Toast ---------- */
 .toast {
@@ -295,7 +278,6 @@ footer p a:hover { color: var(--accent-bright); }
   .folder-body h3 { font-size: 13.5px; }
   .folder-body p { display: none; }
   .image-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
-  .lb-stage { padding: 14px 48px; }
 }
 </style>
 </head>
@@ -392,24 +374,16 @@ footer p a:hover { color: var(--accent-bright); }
   </div>
 </div>
 
-<!-- 灯箱 -->
-<div class="lightbox" id="lightbox">
-  <button class="lb-btn lb-close" id="lb-close"><i data-lucide="x"></i></button>
-  <div class="lb-stage">
-    <button class="lb-btn lb-prev" id="lb-prev"><i data-lucide="chevron-left"></i></button>
-    <img id="lb-img" alt="">
-    <button class="lb-btn lb-next" id="lb-next"><i data-lucide="chevron-right"></i></button>
-  </div>
-  <div class="lb-caption">
-    <h4 id="lb-title"></h4>
-    <p id="lb-desc"></p>
-  </div>
-</div>
+<!-- 灯箱(PhotoSwipe 动态挂载) -->
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true"></div>
 
 <div class="toast" id="toast"></div>
 
-<script>
+<script type="module">
 "use strict";
+
+import PhotoSwipeLightbox from "https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/dist/photoswipe-lightbox.esm.js";
+import PhotoSwipeDynamicCaption from "https://cdn.jsdelivr.net/npm/photoswipe-dynamic-caption-plugin@1.2.7/photoswipe-dynamic-caption-plugin.esm.js";
 
 // ================= 全局状态 =================
 const LS_KEY = "aigc_auth_code";
@@ -422,7 +396,6 @@ const state = {
   folders: [],
   currentFolderId: null,
   images: [],
-  lbIndex: -1,
   uploadFile: null,
   uploadThumb: null,
   uploadDims: null,
@@ -692,30 +665,65 @@ async function deleteImage(id) {
   } catch (e) { toast(e.message, "err"); }
 }
 
-// ================= 灯箱 =================
+// ================= 灯箱(PhotoSwipe) =================
+const gallery = new PhotoSwipeLightbox({
+  pswpModule: () => import("https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/dist/photoswipe.esm.js"),
+  history: false, // 自己管理 history,避免与 hash 路由冲突
+  bgOpacity: 0.96,
+  closeTitle: "关闭 (Esc)",
+  zoomTitle: "缩放",
+  arrowPrevTitle: "上一张",
+  arrowNextTitle: "下一张",
+});
+new PhotoSwipeDynamicCaption(gallery, {
+  type: "below",
+  captionContent: (slide) => {
+    const im = slide.data.image;
+    if (!im) return "";
+    const t = im.title ? `<div class="lb-title">${esc(im.title)}</div>` : "";
+    const d = im.description ? `<div class="lb-desc">${esc(im.description)}</div>` : "";
+    return t + d;
+  },
+});
+gallery.init();
+
+let pswp = null;          // 当前打开的 PhotoSwipe 实例
+let lbHistoryPushed = false; // 打开灯箱时是否压入了 history 条目
+
+gallery.on("beforeOpen", () => {
+  pswp = gallery.pswp;
+  history.pushState({ aigcLightbox: true }, "", location.href);
+  lbHistoryPushed = true;
+});
+gallery.on("destroy", () => {
+  pswp = null;
+  // 灯箱经由 UI 关闭(X / Esc / 手势):回退掉压入的 history 条目
+  if (lbHistoryPushed) {
+    lbHistoryPushed = false;
+    history.back();
+  }
+});
+// 浏览器后退:关闭灯箱而不是离开页面
+window.addEventListener("popstate", () => {
+  if (pswp) {
+    lbHistoryPushed = false;
+    pswp.close();
+  }
+});
+
 function openLightbox(idx) {
-  state.lbIndex = idx;
-  updateLightbox();
-  $("#lightbox").classList.add("open");
-  document.body.style.overflow = "hidden";
-}
-function updateLightbox() {
-  const im = state.images[state.lbIndex];
-  if (!im) return;
-  $("#lb-img").src = im.url;
-  $("#lb-title").textContent = im.title || "";
-  $("#lb-desc").textContent = im.description || "";
-}
-function stepLightbox(d) {
-  const n = state.images.length;
-  if (!n) return;
-  state.lbIndex = (state.lbIndex + d + n) % n;
-  updateLightbox();
+  if (!state.images.length) return;
+  gallery.dataSource = state.images.map((im) => ({
+    src: im.url,
+    width: im.width || 1600,
+    height: im.height || 1600,
+    alt: im.title || "",
+    image: im,
+  }));
+  gallery.loadAndOpen(idx);
 }
 function closeLightbox() {
-  $("#lightbox").classList.remove("open");
-  document.body.style.overflow = "";
-  state.lbIndex = -1;
+  if (pswp) pswp.close();
 }
 
 // ================= 对话框 =================
@@ -882,15 +890,6 @@ $("#pick-zone").addEventListener("drop", (e) => {
   handleFilePicked(e.dataTransfer.files[0]);
 });
 
-$("#lb-close").addEventListener("click", closeLightbox);
-$("#lb-prev").addEventListener("click", () => stepLightbox(-1));
-$("#lb-next").addEventListener("click", () => stepLightbox(1));
-document.addEventListener("keydown", (e) => {
-  if (!$("#lightbox").classList.contains("open")) return;
-  if (e.key === "Escape") closeLightbox();
-  else if (e.key === "ArrowLeft") stepLightbox(-1);
-  else if (e.key === "ArrowRight") stepLightbox(1);
-});
 window.addEventListener("hashchange", render);
 window.openUpload = openUpload;
 
