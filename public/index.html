@@ -6,9 +6,7 @@
 <title>AIGC Gallery</title>
 <link rel="preconnect" href="https://fonts.loli.net">
 <link href="https://fonts.loli.net/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Black&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/dist/photoswipe.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/photoswipe-dynamic-caption-plugin@1.2.7/photoswipe-dynamic-caption-plugin.css">
-<script src="https://unpkg.com/lucide@1.59.0/dist/umd/lucide.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lucide@1.59.0/dist/umd/lucide.min.js"></script>
 <style>
 :root {
   --bg: #0B0B0E;
@@ -382,9 +380,6 @@ footer p a:hover { color: var(--accent-bright); }
 <script type="module">
 "use strict";
 
-import PhotoSwipeLightbox from "https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/dist/photoswipe-lightbox.esm.js";
-import PhotoSwipeDynamicCaption from "https://cdn.jsdelivr.net/npm/photoswipe-dynamic-caption-plugin@1.2.7/photoswipe-dynamic-caption-plugin.esm.js";
-
 // ================= 全局状态 =================
 const LS_KEY = "aigc_auth_code";
 const THUMB_MAX = 512;      // 缩略图最大边长(px)
@@ -665,44 +660,72 @@ async function deleteImage(id) {
   } catch (e) { toast(e.message, "err"); }
 }
 
-// ================= 灯箱(PhotoSwipe) =================
-const gallery = new PhotoSwipeLightbox({
-  pswpModule: () => import("https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/dist/photoswipe.esm.js"),
-  history: false, // 自己管理 history,避免与 hash 路由冲突
-  bgOpacity: 0.96,
-  closeTitle: "关闭 (Esc)",
-  zoomTitle: "缩放",
-  arrowPrevTitle: "上一张",
-  arrowNextTitle: "下一张",
-});
-new PhotoSwipeDynamicCaption(gallery, {
-  type: "below",
-  captionContent: (slide) => {
-    const im = slide.data.image;
-    if (!im) return "";
-    const t = im.title ? `<div class="lb-title">${esc(im.title)}</div>` : "";
-    const d = im.description ? `<div class="lb-desc">${esc(im.description)}</div>` : "";
-    return t + d;
-  },
-});
-gallery.init();
-
-let pswp = null;          // 当前打开的 PhotoSwipe 实例
+// ================= 灯箱(PhotoSwipe,首次打开时才从 CDN 加载) =================
+let gallery = null;          // PhotoSwipeLightbox 实例(惰性创建)
+let pswp = null;             // 当前打开的 PhotoSwipe 实例
 let lbHistoryPushed = false; // 打开灯箱时是否压入了 history 条目
+let lbReady = null;          // 初始化 Promise,防止并发重复初始化
 
-gallery.on("beforeOpen", () => {
-  pswp = gallery.pswp;
-  history.pushState({ aigcLightbox: true }, "", location.href);
-  lbHistoryPushed = true;
-});
-gallery.on("destroy", () => {
-  pswp = null;
-  // 灯箱经由 UI 关闭(X / Esc / 手势):回退掉压入的 history 条目
-  if (lbHistoryPushed) {
-    lbHistoryPushed = false;
-    history.back();
+function ensureLightbox() {
+  if (gallery) return Promise.resolve();
+  if (!lbReady) {
+    lbReady = (async () => {
+      // CSS 与 JS 都在首次打开灯箱时才加载,不占用首屏
+      const loadCss = (href) => new Promise((res, rej) => {
+        const l = document.createElement("link");
+        l.rel = "stylesheet";
+        l.href = href;
+        l.onload = res;
+        l.onerror = () => rej(new Error(`样式加载失败: ${href}`));
+        document.head.appendChild(l);
+      });
+      await Promise.all([
+        loadCss("https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/dist/photoswipe.css"),
+        loadCss("https://cdn.jsdelivr.net/npm/photoswipe-dynamic-caption-plugin@1.2.7/photoswipe-dynamic-caption-plugin.css"),
+      ]);
+      const [{ default: PhotoSwipeLightbox }, { default: PhotoSwipeDynamicCaption }] = await Promise.all([
+        import("https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/dist/photoswipe-lightbox.esm.js"),
+        import("https://cdn.jsdelivr.net/npm/photoswipe-dynamic-caption-plugin@1.2.7/photoswipe-dynamic-caption-plugin.esm.js"),
+      ]);
+      const lb = new PhotoSwipeLightbox({
+        pswpModule: () => import("https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/dist/photoswipe.esm.js"),
+        history: false, // 自己管理 history,避免与 hash 路由冲突
+        bgOpacity: 0.96,
+        closeTitle: "关闭 (Esc)",
+        zoomTitle: "缩放",
+        arrowPrevTitle: "上一张",
+        arrowNextTitle: "下一张",
+      });
+      new PhotoSwipeDynamicCaption(lb, {
+        type: "below",
+        captionContent: (slide) => {
+          const im = slide.data.image;
+          if (!im) return "";
+          const t = im.title ? `<div class="lb-title">${esc(im.title)}</div>` : "";
+          const d = im.description ? `<div class="lb-desc">${esc(im.description)}</div>` : "";
+          return t + d;
+        },
+      });
+      lb.on("beforeOpen", () => {
+        pswp = lb.pswp;
+        history.pushState({ aigcLightbox: true }, "", location.href);
+        lbHistoryPushed = true;
+      });
+      lb.on("destroy", () => {
+        pswp = null;
+        // 灯箱经由 UI 关闭(X / Esc / 手势):回退掉压入的 history 条目
+        if (lbHistoryPushed) {
+          lbHistoryPushed = false;
+          history.back();
+        }
+      });
+      lb.init();
+      gallery = lb;
+    })();
   }
-});
+  return lbReady;
+}
+
 // 浏览器后退:关闭灯箱而不是离开页面
 window.addEventListener("popstate", () => {
   if (pswp) {
@@ -711,8 +734,9 @@ window.addEventListener("popstate", () => {
   }
 });
 
-function openLightbox(idx) {
+async function openLightbox(idx) {
   if (!state.images.length) return;
+  await ensureLightbox();
   // dataSource 必须作为 loadAndOpen 的第二个参数传入;
   // 直接给 gallery 实例赋 dataSource 属性不生效,会导致 0 张图、灯箱打不开
   gallery.loadAndOpen(idx, state.images.map((im) => ({
