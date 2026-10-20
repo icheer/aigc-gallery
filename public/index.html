@@ -713,14 +713,15 @@ window.addEventListener("popstate", () => {
 
 function openLightbox(idx) {
   if (!state.images.length) return;
-  gallery.dataSource = state.images.map((im) => ({
+  // dataSource 必须作为 loadAndOpen 的第二个参数传入;
+  // 直接给 gallery 实例赋 dataSource 属性不生效,会导致 0 张图、灯箱打不开
+  gallery.loadAndOpen(idx, state.images.map((im) => ({
     src: im.url,
     width: im.width || 1600,
     height: im.height || 1600,
     alt: im.title || "",
     image: im,
-  }));
-  gallery.loadAndOpen(idx);
+  })));
 }
 function closeLightbox() {
   if (pswp) pswp.close();
